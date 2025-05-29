@@ -4,3 +4,7 @@ pandas
 numpy
 seaborn
 matplotlib
+folium
+math
+matplotlib.pyplo
+st_folium
