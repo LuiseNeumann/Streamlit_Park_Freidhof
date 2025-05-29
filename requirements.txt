@@ -1,10 +1,8 @@
-scikit-learn
 streamlit
 pandas
 numpy
 seaborn
 matplotlib
+scikit-learn
 folium
-math
-matplotlib.pyplo
-st_folium
+streamlit-folium
