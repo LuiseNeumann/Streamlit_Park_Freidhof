@@ -44,8 +44,8 @@ def erstelle_marktkarte(df, min_groesse, methode):
     return karte
 
 def lade_daten():
-    daten_park = pd.read_csv("C:/Users/luise/python, vorkurs/12.10. vorlesung/aura/Parks_in_Städten/Visual/all/Parks_Deutschland_all.csv")
-    daten_friedh = pd.read_csv("C:/Users/luise/python, vorkurs/12.10. vorlesung/aura/Parks_in_Städten/Visual/all/Friedhöfe_Deutschland_all.csv")
+    daten_park = pd.read_csv("Parks_Deutschland_all.csv")
+    daten_friedh = pd.read_csv("Friedhöfe_Deutschland_all.csv")
    
     daten_park["Typ"] = "Park"
     daten_friedh["Typ"] = "Friedhof"
