@@ -7,7 +7,26 @@ import streamlit as st
 from streamlit_folium import st_folium
 import math
 
-# Berechnungsfunktionen
+# ---------------------Initialisierung Session-Werte-------------------
+if "slider_min" not in st.session_state:
+    st.session_state.slider_min = 1.0
+    st.session_state.slider_max = 20.0
+
+if "manual_min" not in st.session_state:
+    st.session_state.manual_min = st.session_state.slider_min
+    st.session_state.manual_max = st.session_state.slider_max
+
+# Slider Änderung → Update Number Input
+def update_manual_from_slider():
+    st.session_state.manual_min = st.session_state.slider_min
+    st.session_state.manual_max = st.session_state.slider_max
+
+# Number Input Änderung → Update Slider
+def update_slider_from_manual():
+    st.session_state.slider_min = st.session_state.manual_min
+    st.session_state.slider_max = st.session_state.manual_max
+
+# ------------------------Berechnungsfunktionen----------------------
 def berechne_arbeiter(area_ha, min_pro_m2, std_pro_tag, tage_pro_jahr):
     area_m2 = area_ha * 10000
     minuten = area_m2 * min_pro_m2
@@ -44,12 +63,14 @@ def erstelle_marktkarte(df, min_groesse, methode):
     return karte
 
 def lade_daten():
-    daten_park = pd.read_csv("Parks_Deutschland_all.csv")
-    daten_friedh = pd.read_csv("Friedhöfe_Deutschland_all.csv")
+    daten_park = pd.read_csv("Parks_Deutschland_all.csv")     
+    daten_friedh = pd.read_csv("Friedhöfe_Deutschland_all.csv")    
    
     daten_park["Typ"] = "Park"
     daten_friedh["Typ"] = "Friedhof"
     return pd.concat([daten_park, daten_friedh], ignore_index=True)
+
+#-----------------------UI---------------------------------------------
 
 def main():
     st.set_page_config(page_title="Marktdurchdringungstool", layout="wide")
@@ -59,7 +80,34 @@ def main():
 
     # Seitenleiste: Parameter
     st.sidebar.header("Parameter für Marktanalyse")
-    min_groesse = st.sidebar.slider("Minimale Fläche (ha)", 0, 1000, (1, 3))
+
+    st.sidebar.markdown("### Minimale Flächengröße (ha)")
+
+    st.sidebar.slider("Flächenbereich wählen (Slider)", min_value=0.0, max_value=1000.0, value=(st.session_state.slider_min, st.session_state.slider_max), step=0.1,key="slider_range",on_change=update_manual_from_slider)
+
+    # Eingabefelder mit Callback
+    st.sidebar.markdown("**Oder exakte Werte eingeben:**")
+    st.sidebar.number_input("Minimale Fläche (ha)", min_value=0.0, max_value=1000.0, step=0.1,key="manual_min",on_change=update_slider_from_manual)
+    st.sidebar.number_input("Maximale Fläche (ha)", min_value=0.0, max_value=1000.0, step=0.1,key="manual_max",on_change=update_slider_from_manual)
+
+    min_groesse = (st.session_state.slider_min, st.session_state.slider_max)
+
+
+    #slider_range = st.sidebar.slider("Flächenbereich wählen (ha)", min_value=1.0, max_value=1000.0, value=(1.0, 20.0), step=0.1)
+    #st.sidebar.markdown("**Oder exakte Werte eingeben:**")
+    #manual_min = st.sidebar.number_input("Minimale Fläche (ha)", value=slider_range[0], step=0.1, min_value=0.0, max_value=1000.0, key="manual_min")
+    #manual_max = st.sidebar.number_input("Maximale Fläche (ha)", value=slider_range[1], step=0.1, min_value=0.0, max_value=1000.0, key="manual_max")
+
+    # Auswahl: Benutzer entscheidet, ob manuelle Eingabe genutzt wird
+    #use_manual = st.sidebar.checkbox("Manuelle Eingabe verwenden", value=False)
+
+    # Final verwendete Range
+    #if use_manual:
+     #   min_groesse = (manual_min, manual_max)
+    #else:
+     #   min_groesse = slider_range
+
+
     min_pro_m2 = st.sidebar.slider("Minuten pro m²", 0.5, 5.0, 1.3, 0.1)
     std_pro_tag = st.sidebar.slider("Arbeitsstunden pro Tag", 1, 10, 5)
     tage_pro_jahr = st.sidebar.slider("Arbeitstage pro Jahr", 100, 300, 220)
