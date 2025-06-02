@@ -108,39 +108,47 @@ def main():
      #   min_groesse = slider_range
 
 
-    min_pro_m2 = st.sidebar.slider("Minuten pro m²", 0.5, 5.0, 1.3, 0.1)
-    std_pro_tag = st.sidebar.slider("Arbeitsstunden pro Tag", 1, 10, 5)
-    tage_pro_jahr = st.sidebar.slider("Arbeitstage pro Jahr", 100, 300, 220)
-    arbeiter_pro_rad = st.sidebar.slider("Arbeiter pro Fahrrad", 0.5, 5.0, 2.0, 0.1)
+    min_pro_m2 = st.sidebar.slider("Arbeistzeit in Minuten pro m²", 0.5, 5.0, 1.3, 0.1)
+    std_pro_tag = st.sidebar.slider("aktive Arbeitsstunden pro Tag (abzüglich Pausen, Anfahrt etc.)", 1, 10, 5)
+    tage_pro_jahr = st.sidebar.slider("Arbeitstage pro Jahr pro Person (abzüglich Feiertage, Urlaub)", 100, 300, 220)
+    arbeiter_pro_rad = st.sidebar.slider("Anzahl Arbeiter pro Fahrrad", 0.5, 5.0, 2.0, 0.1)
 
     # Empfehlungstext
     st.markdown(f"""
     ### Empfehlung
-    - Zeit pro m²: **{min_pro_m2} Minuten**
-    - Arbeitstage/Jahr: **{tage_pro_jahr}**
-    - Aktive Stunden/Tag: **{std_pro_tag}**
-    - Arbeiter/Fahrrad: **{arbeiter_pro_rad}**
+    - Arbeitszeit pro m²: **{min_pro_m2} Minuten**
+    - Arbeitstage pro Person im Jahr: **{tage_pro_jahr}**
+    - Aktive Arbeitszeit in Stunden/Tag: **{std_pro_tag}**
+    - Fahrrad/Arbeiter (Anzahl Personen für ein Rad): **{arbeiter_pro_rad}**
+    - Quellen: [VKU-Publikationen](https://www.vku.de/fileadmin/user_upload/Verbandsseite/Publikationen/2019/181204_VKU_Betriebsdaten_BBH_2018_gesamt_RZ-WEB_einzel.pdf), [VKU-Publikationen 21](https://www.vku.de/publikationen/2021/information-103-baubetriebshoefe-2020/?sword_list%5B0%5D=bunds&cHash=a9974ae0a8c2ef5cd2d98e282fdae95d)
+
 
     ### Berechnung 
     
     #### Funktion berechne_arbeiter(area_ha):
     - Eingabe: Fläche in Hektar (area_ha)
     - Umrechnung in Quadratmeter: area_m2 = area_ha * 10.000
-    - Zeitaufwand:Pro m² werden [1,3] Minuten benötigt → minuten = area_m2 * [1.3]
+    - Zeitaufwand: Pro m² werden [1,3] Minuten benötigt → Minuten = area_m2 * [1.3]
     - Umrechnung in Stunden 
-    - aktive Arbeitszeit pro Tag: [5 h] → tage = stunden / 5
-    - Ein Arbeiter arbeitet [220 Tage] im Jahr → arbeiter = tage / 220
+    - aktive Arbeitszeit pro Tag: [5 h] → Tage = Stunden / 5
+    - ein Arbeiter arbeitet [220 Tage] im Jahr → Arbeiter = Tage / 220
     - Ausgabe: Aufgerundete Anzahl an Arbeitern, mindestens 1
 
-    #### Funktion berechne_fahrradanzahl(arbeiter):
+    #### Funktion berechne_fahrradanzahl(Arbeiter):
     - Eingabe: Anzahl der benötigten Arbeiter
     - Annahme: Ein Fahrrad lohnt sich für je [2 Arbeiter]
-    - Ausgabe: [Aufgerundete] Anzahl an Fahrrädern (arbeiter / [2])
+    - Ausgabe: [Aufgerundete] Anzahl an Fahrrädern (Arbeiter / [2])
     """)
 
     # Auswahl Berechnungsmodus
-    methode = st.radio("Berechnungsmethode für Fahrradanzahl:", ["Aufrunden", "Abrunden", "Gleitkomma"])
-
+    st.markdown("**Berechnungsmethode für Fahrradanzahl:**")
+    methode = st.radio(
+        label="",
+        options=["Aufrunden", "Abrunden", "Gleitkomma"],
+        key="methode_radio",
+        label_visibility="collapsed"
+    )
+    
     st.markdown(f"""
                 ### Erläuterung 
                 - Aufrunden: bei z.B."0,5" Fahrrädern wird ein Fahrrad empfohlen (Risiko: zu hohes Vorhersagepotenzial)
@@ -185,52 +193,6 @@ def main():
     st.subheader("Bericht herunterladen")
     csv_download = gefiltert.to_csv(index=False).encode("utf-8")
     st.download_button("Bericht herunterladen (CSV)", data=csv_download, file_name="marktpotenzial_bericht.csv")
-
-
-
-    # --- Sensitivitätsanalyse ---
-    st.subheader("Sensitivitätsanalyse")
-
-# Erzeuge Beispielwerte für jeden Parameter (um Auswirkungen zu testen)
-    sens_daten = []
-
-    parameter_range = {
-    "min_pro_m2": np.linspace(0.5, 5.0, 10),
-    "std_pro_tag": np.linspace(1, 10, 10),
-    "tage_pro_jahr": np.linspace(100, 300, 10),
-    "arbeiter_pro_rad": np.linspace(0.5, 5.0, 10),
-    }
-
-    for param, values in parameter_range.items():
-        base_values = {
-            "min_pro_m2": min_pro_m2,
-            "std_pro_tag": std_pro_tag,
-            "tage_pro_jahr": tage_pro_jahr,
-            "arbeiter_pro_rad": arbeiter_pro_rad,
-        }
-
-        results = []
-        for v in values:
-            base_values[param] = v
-            tmp_df = daten.copy()
-            tmp_df["Arbeiter"] = tmp_df["area_ha"].apply(
-                lambda x: berechne_arbeiter(x, base_values["min_pro_m2"], base_values["std_pro_tag"], base_values["tage_pro_jahr"])
-            )
-            tmp_df["Marktpotenzial"] = tmp_df["Arbeiter"].apply(
-                lambda a: berechne_fahrradanzahl(a, base_values["arbeiter_pro_rad"], methode)
-            )
-            results.append(tmp_df["Marktpotenzial"].sum())
-    
-        delta = np.ptp(results)  # peak-to-peak (max - min)
-        sens_daten.append({"Parameter": param, "Einfluss (Δ Räder)": delta})
-
-    sens_df = pd.DataFrame(sens_daten).sort_values("Einfluss (Δ Räder)", ascending=False)
-    st.dataframe(sens_df)
-
-# Balkendiagramm: Einfluss pro Parameter
-    fig_sens, ax_sens = plt.subplots()
-    sns.barplot(x="Einfluss (Δ Räder)", y="Parameter", data=sens_df, ax=ax_sens)
-    st.pyplot(fig_sens)
 
 # --- Histogramm: Fahrräder nach Flächengrößenklasse ---
     st.subheader("Histogramm: Verteilung der Fahrräder nach Flächengröße (alle Rundungsmodi)")
