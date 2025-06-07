@@ -72,8 +72,8 @@ def create_data_hash(df, min_groesse, methode, min_pro_m2, std_pro_tag, tage_pro
 
 @st.cache_data
 def lade_daten():
-    daten_park = pd.read_csv("Streamlit-UI\Parks_Deutschland_all.csv")     
-    daten_friedh = pd.read_csv("Streamlit-UI\Friedhöfe_Deutschland_all.csv")    #CStreamlit-UI\Friedhöfe_Deutschland_all.csv
+    daten_park = pd.read_csv("Parks_Deutschland_all.csv")     
+    daten_friedh = pd.read_csv("Friedhöfe_Deutschland_all.csv")    #CStreamlit-UI\Friedhöfe_Deutschland_all.csv
    
     daten_park["Typ"] = "Park"
     daten_friedh["Typ"] = "Friedhof"
