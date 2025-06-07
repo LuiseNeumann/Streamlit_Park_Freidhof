@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 import math
+import hashlib
 
 # ---------------------Initialisierung Session-Werte-------------------
 if "slider_min" not in st.session_state:
@@ -44,7 +45,9 @@ def berechne_fahrradanzahl(arbeiter, arbeiter_pro_rad, methode):
         return round(arbeiter / arbeiter_pro_rad, 2)
     return 0
 
-def erstelle_marktkarte(df, min_groesse, methode):
+@st.cache_data
+def erstelle_marktkarte_cached(df_hash, df_json, min_groesse, methode):
+    df = pd.read_json(df_json)
     karte = folium.Map(location=[51.1657, 10.4515], zoom_start=6)
 
     for _, row in df.iterrows():
@@ -62,9 +65,15 @@ def erstelle_marktkarte(df, min_groesse, methode):
         ).add_to(karte)
     return karte
 
+def create_data_hash(df, min_groesse, methode, min_pro_m2, std_pro_tag, tage_pro_jahr, arbeiter_pro_rad):
+    """Erstellt einen Hash der relevanten Parameter für Cache-Invalidierung"""
+    hash_string = f"{len(df)}_{min_groesse}_{methode}_{min_pro_m2}_{std_pro_tag}_{tage_pro_jahr}_{arbeiter_pro_rad}"
+    return hashlib.md5(hash_string.encode()).hexdigest()
+
+@st.cache_data
 def lade_daten():
-    daten_park = pd.read_csv("Parks_Deutschland_all.csv")     
-    daten_friedh = pd.read_csv("Friedhöfe_Deutschland_all.csv")    
+    daten_park = pd.read_csv("Streamlit-UI\Parks_Deutschland_all.csv")     
+    daten_friedh = pd.read_csv("Streamlit-UI\Friedhöfe_Deutschland_all.csv")    #CStreamlit-UI\Friedhöfe_Deutschland_all.csv
    
     daten_park["Typ"] = "Park"
     daten_friedh["Typ"] = "Friedhof"
@@ -93,37 +102,21 @@ def main():
     min_groesse = (st.session_state.slider_min, st.session_state.slider_max)
 
 
-    #slider_range = st.sidebar.slider("Flächenbereich wählen (ha)", min_value=1.0, max_value=1000.0, value=(1.0, 20.0), step=0.1)
-    #st.sidebar.markdown("**Oder exakte Werte eingeben:**")
-    #manual_min = st.sidebar.number_input("Minimale Fläche (ha)", value=slider_range[0], step=0.1, min_value=0.0, max_value=1000.0, key="manual_min")
-    #manual_max = st.sidebar.number_input("Maximale Fläche (ha)", value=slider_range[1], step=0.1, min_value=0.0, max_value=1000.0, key="manual_max")
-
-    # Auswahl: Benutzer entscheidet, ob manuelle Eingabe genutzt wird
-    #use_manual = st.sidebar.checkbox("Manuelle Eingabe verwenden", value=False)
-
-    # Final verwendete Range
-    #if use_manual:
-     #   min_groesse = (manual_min, manual_max)
-    #else:
-     #   min_groesse = slider_range
-
-
     min_pro_m2 = st.sidebar.slider("Arbeistzeit in Minuten pro m²", 0.5, 5.0, 1.3, 0.1)
-    std_pro_tag = st.sidebar.slider("aktive Arbeitsstunden pro Tag (abzüglich Pausen, Anfahrt etc.)", 1, 10, 5)
+    std_pro_tag = st.sidebar.slider("aktive Arbeitsstunden pro Tag (abzüglich Pausen, Anfahrt etc.) ", 1, 10, 5)
     tage_pro_jahr = st.sidebar.slider("Arbeitstage pro Jahr pro Person (abzüglich Feiertage, Urlaub)", 100, 300, 220)
     arbeiter_pro_rad = st.sidebar.slider("Anzahl Arbeiter pro Fahrrad", 0.5, 5.0, 2.0, 0.1)
 
     # Empfehlungstext
     st.markdown(f"""
     ### Empfehlung
-    - Arbeitszeit pro m²: **{min_pro_m2} Minuten**
+    - Arbeitszeit pro m²: **{min_pro_m2} Minuten** 
     - Arbeitstage pro Person im Jahr: **{tage_pro_jahr}**
     - Aktive Arbeitszeit in Stunden/Tag: **{std_pro_tag}**
-    - Fahrrad/Arbeiter (Anzahl Personen für ein Rad): **{arbeiter_pro_rad}**
+    - Fahrrad/Arbeiter (Anzahl Personen für ein Rad): **{arbeiter_pro_rad}** 
     - Quellen: [VKU-Publikationen](https://www.vku.de/fileadmin/user_upload/Verbandsseite/Publikationen/2019/181204_VKU_Betriebsdaten_BBH_2018_gesamt_RZ-WEB_einzel.pdf), [VKU-Publikationen 21](https://www.vku.de/publikationen/2021/information-103-baubetriebshoefe-2020/?sword_list%5B0%5D=bunds&cHash=a9974ae0a8c2ef5cd2d98e282fdae95d)
 
-
-    ### Berechnung 
+    ### Berechnung-Erklärung 
     
     #### Funktion berechne_arbeiter(area_ha):
     - Eingabe: Fläche in Hektar (area_ha)
@@ -141,6 +134,7 @@ def main():
     """)
 
     # Auswahl Berechnungsmodus
+    #methode = st.radio("Berechnungsmethode für Fahrradanzahl:", ["Aufrunden", "Abrunden", "Gleitkomma"])
     st.markdown("**Berechnungsmethode für Fahrradanzahl:**")
     methode = st.radio(
         label="",
@@ -148,7 +142,7 @@ def main():
         key="methode_radio",
         label_visibility="collapsed"
     )
-    
+
     st.markdown(f"""
                 ### Erläuterung 
                 - Aufrunden: bei z.B."0,5" Fahrrädern wird ein Fahrrad empfohlen (Risiko: zu hohes Vorhersagepotenzial)
@@ -186,15 +180,33 @@ def main():
     st.dataframe(gefiltert)
 
     # Karte
-    karte = erstelle_marktkarte(gefiltert, min_groesse, methode)
-    st_folium(karte, width=1200, height=800)
+
+    data_hash = create_data_hash(gefiltert, min_groesse, methode, min_pro_m2, std_pro_tag, tage_pro_jahr, arbeiter_pro_rad)
+
+    #karte = erstelle_marktkarte(gefiltert, min_groesse, methode)
+    karte = erstelle_marktkarte_cached(
+        data_hash, 
+        gefiltert.to_json(), 
+        min_groesse, 
+        methode
+    )
+
+    # Speichere den Map State, um Zoom/Pan zu erhalten
+    if 'map_data' not in st.session_state:
+        st.session_state.map_data = None
+
+    map_data = st_folium(karte, width=1200, height=800)
+    # Speichere Map State für nächsten Reload
+    st.session_state.map_data = map_data
+
 
     # Download
     st.subheader("Bericht herunterladen")
     csv_download = gefiltert.to_csv(index=False).encode("utf-8")
     st.download_button("Bericht herunterladen (CSV)", data=csv_download, file_name="marktpotenzial_bericht.csv")
 
-# --- Histogramm: Fahrräder nach Flächengrößenklasse ---
+
+# -------------------- Histogramm: Fahrräder nach Flächengrößenklasse -------------------------------------------
     st.subheader("Histogramm: Verteilung der Fahrräder nach Flächengröße (alle Rundungsmodi)")
 
 # Neue Bin-Labels in 10er Schritten
@@ -242,3 +254,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
