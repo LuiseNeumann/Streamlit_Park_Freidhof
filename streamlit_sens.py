@@ -114,7 +114,7 @@ def main():
     - Arbeitstage pro Person im Jahr: **{tage_pro_jahr}**
     - Aktive Arbeitszeit in Stunden/Tag: **{std_pro_tag}**
     - Fahrrad/Arbeiter (Anzahl Personen für ein Rad): **{arbeiter_pro_rad}** 
-    - Quellen: [VKU-Publikationen](https://www.vku.de/fileadmin/user_upload/Verbandsseite/Publikationen/2019/181204_VKU_Betriebsdaten_BBH_2018_gesamt_RZ-WEB_einzel.pdf), [VKU-Publikationen 21](https://www.vku.de/publikationen/2021/information-103-baubetriebshoefe-2020/?sword_list%5B0%5D=bunds&cHash=a9974ae0a8c2ef5cd2d98e282fdae95d)
+    - Quellen: [VKU-Publikationen](https://www.vku.de/fileadmin/user_upload/Verbandsseite/Publikationen/2019/181204_VKU_Betriebsdaten_BBH_2018_gesamt_RZ-WEB_einzel.pdf), [VKU-Publikationen 21](https://cloud.ovgu.de/apps/files/files/72477936?dir=/Marktanalyse/M%C3%A4rkte/Stadtreinigung/Daten&openfile=true)
 
     ### Berechnung-Erklärung 
     
